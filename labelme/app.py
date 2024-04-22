@@ -1201,12 +1201,12 @@ class MainWindow(QtWidgets.QMainWindow):
 
         if shape.group_id is None:
             item.setText(
-                '{} <font color="#{:02x}{:02x}{:02x}">●</font> - {}||({})'.format(
+                '{} <font color="#{:02x}{:02x}{:02x}">●</font> - {} ({})'.format(
                     html.escape(shape.label), *shape.fill_color.getRgb()[:3], selected_flag, description
                 )
             )
         else:
-            item.setText("{} ({}) - {}||({})".format(shape.label, shape.group_id), selected_flag, description)
+            item.setText("{} ({}) - {} ({})".format(shape.label, shape.group_id), selected_flag, description)
         self.setDirty()
         if self.uniqLabelList.findItemByLabel(shape.label) is None:
             item = self.uniqLabelList.createItemFromLabel(shape.label)
@@ -1279,7 +1279,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 break
 
         label_list_item.setText(
-            '{} <font color="#{:02x}{:02x}{:02x}">●</font> - {}||({})'.format(
+            '{} <font color="#{:02x}{:02x}{:02x}">●</font> - {} ({})'.format(
                 html.escape(text), *shape.fill_color.getRgb()[:3], selected_flag, shape.description
             )
         )
