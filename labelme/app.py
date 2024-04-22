@@ -7,6 +7,7 @@ import os
 import os.path as osp
 import re
 import webbrowser
+from pathlib import Path
 
 import imgviz
 import natsort
@@ -29,6 +30,7 @@ from labelme.widgets import FileDialogPreview
 from labelme.widgets import LabelDialog
 from labelme.widgets import LabelListWidget
 from labelme.widgets import LabelListWidgetItem
+from labelme.widgets import EditableListWidget
 from labelme.widgets import ToolBar
 from labelme.widgets import UniqueLabelQListWidget
 from labelme.widgets import ZoomWidget
@@ -94,8 +96,18 @@ class MainWindow(QtWidgets.QMainWindow):
         self._noSelectionSlot = False
 
         self._copied_shapes = None
-
+        
         # Main widgets and related state.
+        self.json_report = self.selectReportJson()
+        self.data_dict = {}
+        self.tmp_dict = {}
+        for item in self.json_report:
+            k = item['ref_img'].replace('\\', '-')[1:]
+            v = item['content']
+            self.data_dict[k] = v
+
+        del self.json_report
+
         self.labelDialog = LabelDialog(
             parent=self,
             labels=self._config["labels"],
@@ -112,16 +124,23 @@ class MainWindow(QtWidgets.QMainWindow):
         self.flag_dock = self.flag_widget = None
         self.flag_dock = QtWidgets.QDockWidget(self.tr("Flags"), self)
         self.flag_dock.setObjectName("Flags")
-        self.flag_widget = QtWidgets.QListWidget()
+        self.flag_widget = EditableListWidget()
+        self.selected_flags = None
+ 
         if config["flags"]:
             self.loadFlags({k: False for k in config["flags"]})
         self.flag_dock.setWidget(self.flag_widget)
+        self.flag_widget.itemChanged.connect(self.updateFlags)
         self.flag_widget.itemChanged.connect(self.setDirty)
+        self.flag_widget.itemsReordered.connect(self.setDirty)
+        self.flag_widget.itemsReordered.connect(self.updateFlags)
+        self.flag_widget.itemSelectionChanged.connect(self.selectedItem)  # 连接到选择变更的信号
 
         self.labelList.itemSelectionChanged.connect(self.labelSelectionChanged)
         self.labelList.itemDoubleClicked.connect(self.editLabel)
         self.labelList.itemChanged.connect(self.labelItemChanged)
         self.labelList.itemDropped.connect(self.labelOrderChanged)
+
         self.shape_dock = QtWidgets.QDockWidget(self.tr("Polygon Labels"), self)
         self.shape_dock.setObjectName("Labels")
         self.shape_dock.setWidget(self.labelList)
@@ -147,11 +166,13 @@ class MainWindow(QtWidgets.QMainWindow):
         self.fileSearch.textChanged.connect(self.fileSearchChanged)
         self.fileListWidget = QtWidgets.QListWidget()
         self.fileListWidget.itemSelectionChanged.connect(self.fileSelectionChanged)
+
         fileListLayout = QtWidgets.QVBoxLayout()
         fileListLayout.setContentsMargins(0, 0, 0, 0)
         fileListLayout.setSpacing(0)
         fileListLayout.addWidget(self.fileSearch)
         fileListLayout.addWidget(self.fileListWidget)
+
         self.file_dock = QtWidgets.QDockWidget(self.tr("File List"), self)
         self.file_dock.setObjectName("Files")
         fileListWidget = QtWidgets.QWidget()
@@ -892,6 +913,10 @@ class MainWindow(QtWidgets.QMainWindow):
         # if self.firstStart:
         #    QWhatsThis.enterWhatsThisMode()
 
+    def handleItemsReordered(self, itemsList):
+        # 使用传递来的列表
+        print(f"当前列表项目: {itemsList}")
+
     def menu(self, title, actions=None):
         menu = self.menuBar().addMenu(title)
         if actions:
@@ -909,6 +934,54 @@ class MainWindow(QtWidgets.QMainWindow):
         return toolbar
 
     # Support Functions
+    def updateFlags(self):
+        flags = []
+        for i in range(self.flag_widget.count()):
+            flag = self.flag_widget.item(i).text()
+            flags.append(flag)
+        self.tmp_dict[self.ref_index] = '. '.join(flags)
+
+    def selectedItem(self):
+        # 获取当前选中的项目
+        selectedItems = self.flag_widget.selectedItems()
+        if selectedItems:  # 确保至少有一个项目被选中
+            self.selected_flags = selectedItems[0].text()
+            return selectedItems[0].text()
+        else:
+            if self.flag_widget.count() > 0:
+                self.flag_widget.setCurrentRow(0)
+
+    def selectReportJson(self):
+        dialog = QtWidgets.QFileDialog(self, "Select a JSON file")
+        dialog.setFileMode(QtWidgets.QFileDialog.ExistingFile)
+        dialog.setNameFilter("JSON Files (*.json);;All Files (*)")
+        dialog.setOptions(QtWidgets.QFileDialog.DontUseNativeDialog)
+
+        # Calculate the center point of the screen
+        screen = QtWidgets.QApplication.desktop().screenNumber(QtWidgets.QApplication.desktop().cursor().pos())
+        centerPoint = QtWidgets.QApplication.desktop().screenGeometry(screen).center()
+
+        # Calculate dialog's x and y to center it
+        dialogX = centerPoint.x() - dialog.width() // 2
+        dialogY = centerPoint.y() - dialog.height() // 2
+
+        dialog.setGeometry(dialogX, dialogY, dialog.width(), dialog.height())
+
+        if dialog.exec_() == QtWidgets.QDialog.Accepted:
+            self.report_json = dialog.selectedFiles()[0]
+            return self.loadReportJson()
+
+    def loadReportJson(self):
+        import json
+        # 假设你需要在这里加载并处理JSON文件
+        if self.report_json:
+            try:
+                with open(self.report_json, 'r') as file:
+                    data = json.load(file)
+                return data
+            except Exception as e:
+                QtWidgets.QMessageBox.critical(self, "Error", str(e))
+                self.report_json = None  # 重置路径，因为加载失败
 
     def noShapes(self):
         return not len(self.labelList)
@@ -1119,16 +1192,21 @@ class MainWindow(QtWidgets.QMainWindow):
         shape.flags = flags
         shape.group_id = group_id
         shape.description = description
-
         self._update_shape_color(shape)
+        
+        for flag_k, flag in flags.items():
+            if flag:
+                selected_flag = flag_k
+                break
+
         if shape.group_id is None:
             item.setText(
-                '{} <font color="#{:02x}{:02x}{:02x}">●</font>'.format(
-                    html.escape(shape.label), *shape.fill_color.getRgb()[:3]
+                '{} <font color="#{:02x}{:02x}{:02x}">●</font> - {}||({})'.format(
+                    html.escape(shape.label), *shape.fill_color.getRgb()[:3], selected_flag, description
                 )
             )
         else:
-            item.setText("{} ({})".format(shape.label, shape.group_id))
+            item.setText("{} ({}) - {}||({})".format(shape.label, shape.group_id), selected_flag, description)
         self.setDirty()
         if self.uniqLabelList.findItemByLabel(shape.label) is None:
             item = self.uniqLabelList.createItemFromLabel(shape.label)
@@ -1194,9 +1272,15 @@ class MainWindow(QtWidgets.QMainWindow):
             action.setEnabled(True)
 
         self._update_shape_color(shape)
+
+        for flag_k, flag in shape.flags.items():
+            if flag:
+                selected_flag = flag_k
+                break
+
         label_list_item.setText(
-            '{} <font color="#{:02x}{:02x}{:02x}">●</font>'.format(
-                html.escape(text), *shape.fill_color.getRgb()[:3]
+            '{} <font color="#{:02x}{:02x}{:02x}">●</font> - {}||({})'.format(
+                html.escape(text), *shape.fill_color.getRgb()[:3], selected_flag, shape.description
             )
         )
 
@@ -1281,13 +1365,13 @@ class MainWindow(QtWidgets.QMainWindow):
 
             s.append(shape)
         self.loadShapes(s)
-
+ 
     def loadFlags(self, flags):
         self.flag_widget.clear()
-        for key, flag in flags.items():
+        for key in flags:
             item = QtWidgets.QListWidgetItem(key)
-            item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
-            item.setCheckState(Qt.Checked if flag else Qt.Unchecked)
+            # 设置项目为可编辑
+            item.setFlags(item.flags() | QtCore.Qt.ItemIsEditable)
             self.flag_widget.addItem(item)
 
     def saveLabels(self, filename):
@@ -1309,12 +1393,10 @@ class MainWindow(QtWidgets.QMainWindow):
             return data
 
         shapes = [format_shape(item.shape()) for item in self.labelList]
-        flags = {}
+        flags = []
         for i in range(self.flag_widget.count()):
-            item = self.flag_widget.item(i)
-            key = item.text()
-            flag = item.checkState() == Qt.Checked
-            flags[key] = flag
+            flag = self.flag_widget.item(i).text()
+            flags.append(flag)
         try:
             imagePath = osp.relpath(self.imagePath, osp.dirname(filename))
             imageData = self.imageData if self._config["store_data"] else None
@@ -1390,12 +1472,21 @@ class MainWindow(QtWidgets.QMainWindow):
         text = None
         if items:
             text = items[0].data(Qt.UserRole)
-        flags = {}
+
         group_id = None
-        description = ""
+        description = self.selected_flags if self.selected_flags else ""
+
+        flags = {}
+        for i in range(self.flag_widget.count()):
+            flags[self.flag_widget.item(i).text()] = False
+        flags[description] = True
         if self._config["display_label_popup"] or not text:
             previous_text = self.labelDialog.edit.text()
-            text, flags, group_id, description = self.labelDialog.popUp(text)
+            text, flags, group_id, description = self.labelDialog.popUp(
+                text, 
+                description=description, 
+                flags=flags
+            )
             if not text:
                 self.labelDialog.edit.setText(previous_text)
 
@@ -1587,12 +1678,39 @@ class MainWindow(QtWidgets.QMainWindow):
         if self._config["keep_prev"]:
             prev_shapes = self.canvas.shapes
         self.canvas.loadPixmap(QtGui.QPixmap.fromImage(image))
-        flags = {k: False for k in self._config["flags"] or []}
+
+        def split_into_sentences(text):
+            # 简单地根据几个常见的句子结束符分割文本
+            sentences = []
+            for separator in ['. ', '? ', '! ']:
+                if sentences:
+                    # 分割每个已经分割的部分
+                    sentences = [sentence for s in sentences for sentence in s.split(separator)]
+                else:
+                    sentences = text.split(separator)
+            # 过滤空字符串
+            sentences = [sentence.strip() for sentence in sentences if sentence.strip()]
+            return sentences
+        
+        path = Path(self.filename)
+        patient_id, case_id, _ = path.parts[-3:]
+        self.ref_index = patient_id[:3] + '-' + patient_id + '-' + case_id
+        content = self.data_dict[self.ref_index]
+        flags = {k: False for k in split_into_sentences(content)}
+
         if self.labelFile:
             self.loadLabels(self.labelFile.shapes)
             if self.labelFile.flags is not None:
-                flags.update(self.labelFile.flags)
+                flags = self.labelFile.flags
+        
+        if self.ref_index in self.tmp_dict.keys():
+            content = self.tmp_dict[self.ref_index]
+            flags = {k: False for k in split_into_sentences(content)}
+                
         self.loadFlags(flags)
+        if self.flag_widget.count() > 0:
+            self.flag_widget.setCurrentRow(0)
+
         if self._config["keep_prev"] and self.noShapes():
             self.loadShapes(prev_shapes, replace=False)
             self.setDirty()
@@ -1897,7 +2015,6 @@ class MainWindow(QtWidgets.QMainWindow):
             label_file = self.filename
         else:
             label_file = osp.splitext(self.filename)[0] + ".json"
-
         return label_file
 
     def deleteFile(self):
@@ -2098,10 +2215,15 @@ class MainWindow(QtWidgets.QMainWindow):
         ]
 
         images = []
-        for root, dirs, files in os.walk(folderPath):
+        for root, _, files in os.walk(folderPath):
             for file in files:
                 if file.lower().endswith(tuple(extensions)):
                     relativePath = os.path.normpath(osp.join(root, file))
+                    normalized_path = os.path.normpath(relativePath)
+                    parts = normalized_path.split(os.sep)
+                    case_index = parts[-3][:3] + '-' + parts[-3] + '-' + parts[-2]
+                    if case_index not in self.data_dict.keys():
+                        break
                     images.append(relativePath)
         images = natsort.os_sorted(images)
         return images

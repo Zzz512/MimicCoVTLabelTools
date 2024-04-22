@@ -4,6 +4,7 @@ from qtpy import QtWidgets
 from qtpy.QtCore import Qt
 from qtpy.QtGui import QPalette
 from qtpy.QtWidgets import QStyle
+from PyQt5.QtCore import pyqtSignal
 
 
 # https://stackoverflow.com/a/2039745/4158863
@@ -58,12 +59,19 @@ class HTMLDelegate(QtWidgets.QStyledItemDelegate):
         painter.restore()
 
     def sizeHint(self, option, index):
-        thefuckyourshitup_constant = 4
-        return QtCore.QSize(
-            int(self.doc.idealWidth()),
-            int(self.doc.size().height() - thefuckyourshitup_constant),
-        )
+        if option is None or index is None:
+            return QtCore.QSize(100, 20) 
+        
+        text = index.data(Qt.DisplayRole)
+        if text:
+            self.doc.setHtml(text)
+        else:
+            self.doc.setPlainText('')
+        self.doc.setTextWidth(option.rect.width())
+        idealWidth = self.doc.idealWidth() 
+        extraWidth = 10
 
+        return QtCore.QSize(int(idealWidth ** 1.2) + extraWidth, 20)
 
 class LabelListWidgetItem(QtGui.QStandardItem):
     def __init__(self, text=None, shape=None):
@@ -91,6 +99,44 @@ class LabelListWidgetItem(QtGui.QStandardItem):
     def __repr__(self):
         return '{}("{}")'.format(self.__class__.__name__, self.text())
 
+
+class EditableListWidget(QtWidgets.QListWidget):
+    itemsReordered = pyqtSignal()
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setSelectionMode(QtWidgets.QListWidget.SingleSelection)
+        self.setDragDropMode(QtWidgets.QAbstractItemView.InternalMove)  # 启用内部项的拖放
+        self.setDefaultDropAction(QtCore.Qt.MoveAction)  # 设置默认的拖放操作为移动
+        self.setAcceptDrops(True)  # 允许控件接受拖放
+        self.setDragEnabled(True)  # 允许项被拖动
+
+        self.itemDoubleClicked.connect(self.editItem)
+        self.itemChanged.connect(self.deleteItem)
+
+    def mouseDoubleClickEvent(self, event):
+        # 检查双击位置是否为列表空白处
+        item = self.itemAt(event.pos())
+        if not item:
+            self.addItem("New description")
+            # 编辑新添加的项
+            newItem = self.item(self.count() - 1)
+            newItem.setFlags(newItem.flags() | QtCore.Qt.ItemIsEditable)
+            self.editItem(newItem)
+        else:
+            super().mouseDoubleClickEvent(event)  # 确保其他双击事件正常处理
+
+    def deleteItem(self, item):
+        # 检查项目内容，如果为空则删除项目
+        if not item.text():
+            row = self.row(item)
+            self.takeItem(row)
+
+    def dropEvent(self, event):
+        super().dropEvent(event)  # Call the base class implementation to ensure the item is dragged and dropped correctly
+        # Print the text of all items in the list
+        self.itemsReordered.emit()    
+ 
 
 class StandardItemModel(QtGui.QStandardItemModel):
     itemDropped = QtCore.Signal()

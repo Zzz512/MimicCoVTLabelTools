@@ -1,5 +1,5 @@
 import re
-
+from copy import deepcopy
 from qtpy import QT_VERSION
 from qtpy import QtCore
 from qtpy import QtGui
@@ -94,8 +94,18 @@ class LabelDialog(QtWidgets.QDialog):
             flags = {}
         self._flags = flags
         self.flagsLayout = QtWidgets.QVBoxLayout()
-        self.resetFlags()
-        layout.addItem(self.flagsLayout)
+        self.flagsComboBox = QtWidgets.QComboBox(self)
+        self.flagsComboBox.currentIndexChanged.connect(self.onFlagChanged)
+        # 这里是新增代码，用于将下拉框添加到flags布局中
+        self.flagsLayout.addWidget(self.flagsComboBox)
+        # self.setFlags({})  # 假设你在这个方法里设置了flagsComboBox的选项
+
+        # 创建一个容器widget作为flagsLayout的父对象
+        flagsContainer = QtWidgets.QWidget(self)
+        flagsContainer.setLayout(self.flagsLayout)
+        # 将容器widget添加到主布局中，替代之前的addItem方法
+        layout.addWidget(flagsContainer)
+
         self.edit.textChanged.connect(self.updateFlags)
         # text edit
         self.editDescription = QtWidgets.QTextEdit()
@@ -155,6 +165,7 @@ class LabelDialog(QtWidgets.QDialog):
 
     def updateFlags(self, label_new):
         # keep state of shared flags
+        return
         flags_old = self.getFlags()
 
         flags_new = {}
@@ -162,6 +173,7 @@ class LabelDialog(QtWidgets.QDialog):
             if re.match(pattern, label_new):
                 for key in keys:
                     flags_new[key] = flags_old.get(key, False)
+
         self.setFlags(flags_new)
 
     def deleteFlags(self):
@@ -170,27 +182,33 @@ class LabelDialog(QtWidgets.QDialog):
             self.flagsLayout.removeWidget(item)
             item.setParent(None)
 
-    def resetFlags(self, label=""):
-        flags = {}
-        for pattern, keys in self._flags.items():
-            if re.match(pattern, label):
-                for key in keys:
-                    flags[key] = False
-        self.setFlags(flags)
+    def onFlagChanged(self, index):
+        selectedText = self.flagsComboBox.currentText()
+        self.editDescription.setPlainText(selectedText)
 
     def setFlags(self, flags):
-        self.deleteFlags()
-        for key in flags:
-            item = QtWidgets.QCheckBox(key, self)
-            item.setChecked(flags[key])
-            self.flagsLayout.addWidget(item)
-            item.show()
+        # 清空下拉框当前的所有选项
+        self.flagsComboBox.clear()
+
+        # 填充下拉框选项
+        for key, value in flags.items():
+            self.flagsComboBox.addItem(key, value)
+        
+        # 查找第一个值为 True 的键，并将其设置为当前选中项
+        for i in range(self.flagsComboBox.count()):
+            if self.flagsComboBox.itemData(i):
+                self.flagsComboBox.setCurrentIndex(i)
+                break
 
     def getFlags(self):
         flags = {}
-        for i in range(self.flagsLayout.count()):
-            item = self.flagsLayout.itemAt(i).widget()
-            flags[item.text()] = item.isChecked()
+        # 假设每个下拉框对应一个标志，且下拉框的每个选项代表一个可能的标志值
+        # 获取当前选中的项的文本
+        selectedText = self.flagsComboBox.currentText()
+        # 将选中的项存储为 True，其余存储为 False（或者您可以根据需要调整逻辑）
+        for i in range(self.flagsComboBox.count()):
+            text = self.flagsComboBox.itemText(i)
+            flags[text] = (text == selectedText)
         return flags
 
     def getGroupId(self):
@@ -209,14 +227,13 @@ class LabelDialog(QtWidgets.QDialog):
         # if text is None, the previous label in self.edit is kept
         if text is None:
             text = self.edit.text()
-        # description is always initialized by empty text c.f., self.edit.text
+        if flags:
+            self.setFlags(flags)
         if description is None:
             description = ""
         self.editDescription.setPlainText(description)
-        if flags:
-            self.setFlags(flags)
-        else:
-            self.resetFlags(text)
+        # else:
+        #     self.resetFlags(text)
         self.edit.setText(text)
         self.edit.setSelection(0, len(text))
         if group_id is None:
