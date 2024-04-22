@@ -1,4 +1,4 @@
-# 杭州电子科技大学MIL实验室临时标注系统
+# Hangzhou Dianzi University MIL CoVT Annotation Tool
 
 ### Get report json file
 [Baiduyun download link](https://pan.baidu.com/s/1v2wt3CTd2MDnsr8ITOrn5g?pwd=hhdu)
