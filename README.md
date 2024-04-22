@@ -20,7 +20,7 @@ conda activate labelme-covt
 pip install .
 
 # Run
-python ./labelme/__main__.py
+labelme or python ./labelme/__main__.py
 
 # Build the standalone executable
 pip install pyinstaller
