@@ -1,3 +1,5 @@
+# 杭州电子科技大学MIL实验室临时标注系统
+
 ### Get report json file
 [Baiduyun download link](https://pan.baidu.com/s/1v2wt3CTd2MDnsr8ITOrn5g?pwd=hhdu)
 
@@ -8,6 +10,7 @@ Below shows how to build the standalone executable on macOS, Linux and Windows.
 ```bash
 # Git Clone
 git clone https://github.com/Zzz512/MimicCoVTLabelTools.git
+cd MimicCoVTLabelTools
 
 # Setup conda
 conda create --name labelme-covt python=3.10
