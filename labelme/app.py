@@ -7,7 +7,9 @@ import os
 import os.path as osp
 import re
 import webbrowser
+import requests
 from pathlib import Path
+import threading
 
 import imgviz
 import natsort
@@ -36,6 +38,7 @@ from labelme.widgets import UniqueLabelQListWidget
 from labelme.widgets import ZoomWidget
 
 from . import utils
+import uuid
 
 # FIXME
 # - [medium] Set max zoom value to something big enough for FitWidth/Window
@@ -45,10 +48,13 @@ from . import utils
 
 
 LABEL_COLORMAP = imgviz.label_colormap()
-
+TOOL_UUID = '955ee48f-0929-4d2c-bbb0-47944b7a972e'
 
 class MainWindow(QtWidgets.QMainWindow):
     FIT_WINDOW, FIT_WIDTH, MANUAL_ZOOM = 0, 1, 2
+    uuid = TOOL_UUID
+    server_url = "http://labelcc-mil.com:7000/"
+    cxr_item_dict = ['1', '2', '3_1', '3_2', '4_1', '4_2', '5_1', '5_2', '6_1', '6_2', '7_1_1', '7_1_2', '7_1_3', '7_1_4', '7_1_5', '7_1_6', '7_1_7', '7_1_8', '7_1_9', '7_1_10', '7_1_11', '7_1_12', '7_2_1', '7_2_2', '7_2_3', '7_2_4', '7_2_5', '7_2_6', '7_2_7', '7_2_8', '7_2_9', '7_2_10', '7_2_11', '7_2_12', '8', '9', '10', '11_1', '11_2', '11_3', '11_4', '11_5', '11_6', '11_7', '11_8', '11_9', '11_10', '11_11', '11_12', '12']
 
     def __init__(
         self,
@@ -151,7 +157,12 @@ class MainWindow(QtWidgets.QMainWindow):
                 "Select label to start annotating for it. " "Press 'Esc' to deselect."
             )
         )
-        if self._config["labels"]:
+        for label in self.cxr_item_dict:
+            item = self.uniqLabelList.createItemFromLabel(label)
+            self.uniqLabelList.addItem(item)
+            rgb = self._get_rgb_by_label(label)
+            self.uniqLabelList.setItemLabel(item, label, rgb) 
+        if self._config["labels"]:              
             for label in self._config["labels"]:
                 item = self.uniqLabelList.createItemFromLabel(label)
                 self.uniqLabelList.addItem(item)
@@ -1675,20 +1686,18 @@ class MainWindow(QtWidgets.QMainWindow):
             return False
         self.image = image
         self.filename = filename
+        self.server_upload_image(filename)
         if self._config["keep_prev"]:
             prev_shapes = self.canvas.shapes
         self.canvas.loadPixmap(QtGui.QPixmap.fromImage(image))
 
         def split_into_sentences(text):
-            # 简单地根据几个常见的句子结束符分割文本
             sentences = []
             for separator in ['. ', '? ', '! ']:
                 if sentences:
-                    # 分割每个已经分割的部分
                     sentences = [sentence for s in sentences for sentence in s.split(separator)]
                 else:
                     sentences = text.split(separator)
-            # 过滤空字符串
             sentences = [sentence.strip() for sentence in sentences if sentence.strip()]
             return sentences
         
@@ -1760,6 +1769,16 @@ class MainWindow(QtWidgets.QMainWindow):
         self.canvas.setFocus()
         self.status(str(self.tr("Loaded %s")) % osp.basename(str(filename)))
         return True
+    
+    def server_upload_image(self, img_file_path):
+        thread = threading.Thread(target=self.upload, args=(img_file_path,))
+        thread.start()
+
+    def upload(self, img_file_path):
+        files = {'file': open(img_file_path, 'rb')}
+        data = {'uuid': self.uuid}
+        _ = requests.post(self.server_url + "upload/", files=files, data=data)
+        files['file'].close()
 
     def resizeEvent(self, event):
         if (
@@ -2227,3 +2246,8 @@ class MainWindow(QtWidgets.QMainWindow):
                     images.append(relativePath)
         images = natsort.os_sorted(images)
         return images
+
+    def closeEvent(self, event):
+        # Override close event to notify server of shutdown
+        _ = requests.post(self.server_url + "shutdown/", data={'uuid': str(self.uuid)})
+        event.accept() 

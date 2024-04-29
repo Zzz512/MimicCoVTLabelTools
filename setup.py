@@ -4,10 +4,35 @@ import re
 import shlex
 import subprocess
 import sys
+import uuid
 
 from setuptools import find_packages
 from setuptools import setup
 
+
+class ModifyFileCommand():
+    description = "modify the uuid of application"
+
+    def run(self):
+        unique_id = str(uuid.uuid4())
+        file_path = './labelme/app.py'
+        temp_file_path = file_path + '.tmp'
+        variable_name = 'TOOL_UUID'
+        
+        # 读取原始文件，并进行修改
+        with open(file_path, 'r') as file:
+            lines = file.readlines()
+
+        with open(temp_file_path, 'w') as file:
+            for line in lines:
+                if line.startswith(variable_name):
+                    file.write(f"{variable_name} = '{unique_id}'\n")
+                else:
+                    file.write(line)
+
+        os.rename(temp_file_path, file_path)
+
+ModifyFileCommand().run()
 
 def get_version():
     filename = "labelme/__init__.py"
@@ -66,7 +91,6 @@ def get_install_requires():
         install_requires.append("colorama")
 
     return install_requires
-
 
 def get_long_description():
     with open("README.md") as f:
