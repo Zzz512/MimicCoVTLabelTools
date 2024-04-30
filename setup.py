@@ -20,10 +20,10 @@ class ModifyFileCommand():
         variable_name = 'TOOL_UUID'
         
         # 读取原始文件，并进行修改
-        with open(file_path, 'r') as file:
+        with open(file_path, 'r', encoding="utf-8") as file:
             lines = file.readlines()
 
-        with open(temp_file_path, 'w') as file:
+        with open(temp_file_path, 'w', encoding="utf-8") as file:
             for line in lines:
                 if line.startswith(variable_name):
                     file.write(f"{variable_name} = '{unique_id}'\n")
