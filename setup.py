@@ -29,7 +29,8 @@ class ModifyFileCommand():
                     file.write(f"{variable_name} = '{unique_id}'\n")
                 else:
                     file.write(line)
-
+        if os.path.exists(file path):
+            os .remove(file path)
         os.rename(temp_file_path, file_path)
 
 ModifyFileCommand().run()
