@@ -171,6 +171,7 @@ def main():
         entry_points={
             "console_scripts": [
                 "labelme-covt=labelme.__main__:main",
+                "labelme-check=labelme.check:main",
                 "labelme_draw_json=labelme.cli.draw_json:main",
                 "labelme_draw_label_png=labelme.cli.draw_label_png:main",
                 "labelme_json_to_dataset=labelme.cli.json_to_dataset:main",

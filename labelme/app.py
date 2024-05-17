@@ -38,7 +38,8 @@ from labelme.widgets import UniqueLabelQListWidget
 from labelme.widgets import ZoomWidget
 
 from . import utils
-import uuid
+import json
+
 
 # FIXME
 # - [medium] Set max zoom value to something big enough for FitWidth/Window
@@ -48,7 +49,7 @@ import uuid
 
 
 LABEL_COLORMAP = imgviz.label_colormap()
-TOOL_UUID = 'f85bb8dc-f26e-4071-b13a-ec901081f387'
+TOOL_UUID = 'd92bf291-4449-4ee2-8364-33b995557be1'
 
 class MainWindow(QtWidgets.QMainWindow):
     FIT_WINDOW, FIT_WIDTH, MANUAL_ZOOM = 0, 1, 2
@@ -983,7 +984,6 @@ class MainWindow(QtWidgets.QMainWindow):
             return self.loadReportJson()
 
     def loadReportJson(self):
-        import json
         # 假设你需要在这里加载并处理JSON文件
         if self.report_json:
             try:
@@ -1183,9 +1183,15 @@ class MainWindow(QtWidgets.QMainWindow):
         shape = item.shape()
         if shape is None:
             return
+        
+        description = self.selected_flags
+        flags = {}
+        for i in range(self.flag_widget.count()):
+            flags[self.flag_widget.item(i).text()] = False
+        flags[description] = True
         text, flags, group_id, description = self.labelDialog.popUp(
             text=shape.label,
-            flags=shape.flags,
+            flags=flags,
             group_id=shape.group_id,
             description=shape.description,
         )
@@ -1703,7 +1709,10 @@ class MainWindow(QtWidgets.QMainWindow):
         
         path = Path(self.filename)
         patient_id, case_id, _ = path.parts[-3:]
-        self.ref_index = patient_id[:3] + '-' + patient_id + '-' + case_id
+        if '-' in case_id:
+            self.ref_index = case_id[:3] + '-' + case_id
+        else:
+            self.ref_index = patient_id[:3] + '-' + patient_id + '-' + case_id
         content = self.data_dict[self.ref_index]
         flags = {k: False for k in split_into_sentences(content)}
 
@@ -2016,6 +2025,24 @@ class MainWindow(QtWidgets.QMainWindow):
         return filename
 
     def _saveFile(self, filename):
+        def split_sentences(text):
+            sentences = re.split(r'\.+', text)
+            sentences = [sentence.lstrip() for sentence in sentences if sentence]
+            return sentences
+
+        if self.ref_index in self.tmp_dict.keys():
+            directory = os.path.dirname(filename)
+            # list all json files
+            files = os.listdir(directory)
+            matching_files = [file for file in files if file.endswith(".json") and file != os.path.basename(filename)]
+            for file in matching_files:
+                other_view_json_path = os.path.join(directory, file)
+                with open(other_view_json_path, 'r') as f:
+                    json_data = json.load(f)
+                json_data['flags'] = split_sentences(self.tmp_dict[self.ref_index])
+                with open(other_view_json_path, 'w') as f:
+                    json.dump(json_data, f, indent=2)
+
         if filename and self.saveLabels(filename):
             self.addRecentFile(filename)
             self.setClean()
@@ -2240,7 +2267,10 @@ class MainWindow(QtWidgets.QMainWindow):
                     relativePath = os.path.normpath(osp.join(root, file))
                     normalized_path = os.path.normpath(relativePath)
                     parts = normalized_path.split(os.sep)
-                    case_index = parts[-3][:3] + '-' + parts[-3] + '-' + parts[-2]
+                    if '-' in parts[-2]:
+                        case_index = parts[-2][:3] + '-' + parts[-2]
+                    else:
+                        case_index = parts[-3][:3] + '-' + parts[-3] + '-' + parts[-2]
                     if case_index not in self.data_dict.keys():
                         break
                     images.append(relativePath)
