@@ -261,6 +261,7 @@ class AnimatedDisplay(QMainWindow):
 
         json_dir_path = os.path.join(case_file_path, file_dir)
         json_file_list = [file_name for file_name in os.listdir(json_dir_path) if file_name.endswith('.json')]
+        # self.log_content = [f"病例 id:{self.current_index}\t" + self.source_mapper[json_file_list[0]]]
         self.log_content = []
 
         for json_file_name in json_file_list:
@@ -408,15 +409,48 @@ class AnimatedDisplay(QMainWindow):
     def select_folder(self):
         folder_path = QFileDialog.getExistingDirectory(self, "Select Folder", "")
         if folder_path:
+            self.folder_path = folder_path
+            self.load_current_index()
             global case_file_path, case_file_list
             case_file_path = folder_path
             case_file_list = [item for item in os.listdir(case_file_path) if item.startswith('p')]
             case_file_list = sorted(case_file_list, key=lambda x: (int(x.split('-')[0][1:]), int(x.split('-')[1][1:])))
-            self.current_index = 0
             covt_seq = self.load_covt_seq(case_file_list[self.current_index])
             if covt_seq:
                 self.set_items(covt_seq)
                 self.setWindowTitle(case_file_list[self.current_index])
+
+
+    def save_current_index(self):
+        current_file_path = __file__
+        normalized_path = os.path.normpath(current_file_path)
+        current_directory = os.path.dirname(normalized_path)
+
+        if os.path.exists(os.path.join(current_directory, 'settings.json')):
+            with open(os.path.join(current_directory, 'settings.json'), 'r') as f:
+                settings = json.load(f)
+        else:
+            settings = {}
+        settings[self.folder_path] = self.current_index
+        with open(os.path.join(current_directory, 'settings.json'), 'w') as f:
+            json.dump(settings, f, indent=4)
+
+    def load_current_index(self):
+        current_file_path = __file__
+        normalized_path = os.path.normpath(current_file_path)
+        current_directory = os.path.dirname(normalized_path)
+
+        if os.path.exists(os.path.join(current_directory, 'settings.json')):
+            with open(os.path.join(current_directory, 'settings.json'), 'r') as f:
+                settings = json.load(f)
+            self.current_index = settings.get(self.folder_path, 0)
+        else:
+            self.current_index = 0
+    
+
+    def closeEvent(self, event):
+        self.save_current_index()
+        event.accept()
 
 def main():
     app = QApplication(sys.argv)
