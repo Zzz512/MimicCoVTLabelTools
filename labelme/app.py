@@ -49,7 +49,7 @@ import json
 
 
 LABEL_COLORMAP = imgviz.label_colormap()
-TOOL_UUID = 'd92bf291-4449-4ee2-8364-33b995557be1'
+TOOL_UUID = 'a4d516aa-acbf-4060-9feb-7ffdd9aa3fa2'
 
 class MainWindow(QtWidgets.QMainWindow):
     FIT_WINDOW, FIT_WIDTH, MANUAL_ZOOM = 0, 1, 2

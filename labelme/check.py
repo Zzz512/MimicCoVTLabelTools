@@ -69,7 +69,6 @@ def remove_duplicates(lst):
     return result
 
 class AnimatedDisplay(QMainWindow):
-    label_source_path = "/Users/wxy/Documents/CoVT/data"
     def __init__(self, items=None, *args, **kwargs):
         super(AnimatedDisplay, self).__init__(*args, **kwargs)
 
@@ -113,16 +112,6 @@ class AnimatedDisplay(QMainWindow):
         self.items = []
         self.hist_imgs = []
         self.log_content = []
-        self.source_mapper = self.load_source_mapper()
-
-    def load_source_mapper(self) -> dict:
-        source_mapper = dict()
-        for root, _, file_list in os.walk(self.label_source_path):
-            for file_name in file_list:
-                if not file_name.endswith('.json'):
-                    continue
-                source_mapper[file_name] = '-'.join(root.split(os.sep)[-2:])
-        return source_mapper
     
     def clear_layout(self, layout):
         """清空布局中的所有小部件"""
@@ -272,7 +261,7 @@ class AnimatedDisplay(QMainWindow):
 
         json_dir_path = os.path.join(case_file_path, file_dir)
         json_file_list = [file_name for file_name in os.listdir(json_dir_path) if file_name.endswith('.json')]
-        self.log_content = [f"病例 id:{self.current_index}\t" + self.source_mapper[json_file_list[0]]]
+        self.log_content = []
 
         for json_file_name in json_file_list:
             json_file_path = os.path.join(json_dir_path, json_file_name)
@@ -411,11 +400,8 @@ class AnimatedDisplay(QMainWindow):
         self.warning_log_display.setFont(font)
         cursor = self.warning_log_display.textCursor()
         
-        for index, line in enumerate(self.log_content):
-            if index >= 1:  # 从第二个项目开始，设置字体颜色为红色
-                cursor.insertText(line + '\n', red_format)
-            else:
-                cursor.insertText(line + '\n')
+        for line in self.log_content:
+            cursor.insertText(line + '\n', red_format)
 
         self.warning_log_display.setTextCursor(cursor)
 
