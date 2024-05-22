@@ -266,7 +266,7 @@ class AnimatedDisplay(QMainWindow):
 
         for json_file_name in json_file_list:
             json_file_path = os.path.join(json_dir_path, json_file_name)
-            with open(json_file_path, 'r') as f:
+            with open(json_file_path, 'r', encoding='utf-8') as f:
                 json_data = json.load(f)
 
             if json_data['imageData'] is None:
