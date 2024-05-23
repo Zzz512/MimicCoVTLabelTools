@@ -68,17 +68,13 @@ def remove_duplicates(lst):
             result.append(item)
     return result
 
-class AnimatedDisplay(QMainWindow):
+class AnimatedDisplay(QWidget):
     def __init__(self, items=None, *args, **kwargs):
         super(AnimatedDisplay, self).__init__(*args, **kwargs)
 
-        self.setWindowTitle("Image and Text Display")
-        self.setGeometry(100, 100, 800, 1000)
-
         # Central widget and layout
-        central_widget = QWidget()
-        self.setCentralWidget(central_widget)
-        self.layout = QVBoxLayout(central_widget)
+        self.layout = QVBoxLayout(self)
+        self.setLayout(self.layout)
 
         # Scroll Area
         self.scroll_area = QScrollArea()
@@ -101,9 +97,9 @@ class AnimatedDisplay(QMainWindow):
         self.layout.addWidget(self.warning_log_display)
 
         # Folder selection button
-        self.folder_button = QPushButton("Select Folder", self)
-        self.folder_button.clicked.connect(self.select_folder)
-        self.layout.addWidget(self.folder_button)
+        # self.folder_button = QPushButton("Select Folder", self)
+        # self.folder_button.clicked.connect(self.select_folder)
+        # self.layout.addWidget(self.folder_button)
 
         if items is not None:
             self.set_items(items)
@@ -112,7 +108,23 @@ class AnimatedDisplay(QMainWindow):
         self.items = []
         self.hist_imgs = []
         self.log_content = []
-    
+        self.original_pixmaps = {}
+
+    def resizeEvent(self, event):
+        """Override the resize event to resize images when the window is resized."""
+        super().resizeEvent(event)
+        self.resize_images()
+
+    def resize_images(self):
+        """Resize images based on the current window size."""
+        for i in range(self.scroll_area_layout.count()):
+            widget = self.scroll_area_layout.itemAt(i).widget()
+            if isinstance(widget, QLabel) and widget.pixmap():
+                original_pixmap = self.original_pixmaps.get(widget)
+                if original_pixmap:
+                    widget.setPixmap(original_pixmap.scaled(self.scroll_area.size(), Qt.KeepAspectRatio)) 
+
+
     def clear_layout(self, layout):
         """清空布局中的所有小部件"""
         while layout.count():
@@ -143,6 +155,7 @@ class AnimatedDisplay(QMainWindow):
 
         self.show_next_item()
         self.update_warning_log()
+        self.resizeEvent(None)
 
     def add_random_color_to_mask(self, org_img, img_data):
         """
@@ -197,15 +210,14 @@ class AnimatedDisplay(QMainWindow):
 
             q_image = QImage(img_data.tobytes(), img_data.width, img_data.height, QImage.Format_RGBA8888)
             self.current_image_label = QLabel(self)
-            self.pixmap_full = QPixmap.fromImage(q_image)
+            self.pixmap_full = QPixmap.fromImage(q_image) 
+            self.original_pixmaps[self.current_image_label] = self.pixmap_full
             
-            # 将 pixmap_full 设置为 QLabel 的 Pixmap
             self.current_image_label.setPixmap(self.pixmap_full)
             self.current_image_label.setAlignment(Qt.AlignCenter)
             self.scroll_area_layout.addWidget(self.current_image_label)
 
     def add_divider(self):
-        """添加分割线"""
         line = QFrame()
         line.setFrameShape(QFrame.HLine)
         line.setFrameShadow(QFrame.Sunken)
@@ -237,31 +249,12 @@ class AnimatedDisplay(QMainWindow):
         scroll_bar = self.scroll_area.verticalScrollBar()
         scroll_bar.setValue(scroll_bar.minimum())
 
-    def keyPressEvent(self, event):
-        if event.key() == Qt.Key_A or event.key() == Qt.Key_Left:  # 向左箭头
-            self.current_index -= 1
-        elif event.key() == Qt.Key_D or event.key() == Qt.Key_Right:  # 向右箭头
-            self.current_index += 1
-        elif event.key() == Qt.Key_R:  # 'r' 键
-            self.show_next_item()
-
-        # 处理索引越界情况
-        self.current_index = max(0, min(self.current_index, len(case_file_list) - 1))
-
-        # 根据索引获取对应的 covt_seq
-        self.setWindowTitle(case_file_list[self.current_index])
-        covt_seq = self.load_covt_seq(case_file_list[self.current_index])
-        if covt_seq:
-            self.set_items(covt_seq)
-
-    def load_covt_seq(self, file_dir):
+    def load_covt_seq(self, json_dir_path):
         covt_seq = []
         org_img_list = []
         flags = list()
 
-        json_dir_path = os.path.join(case_file_path, file_dir)
         json_file_list = [file_name for file_name in os.listdir(json_dir_path) if file_name.endswith('.json')]
-        # self.log_content = [f"病例 id:{self.current_index}\t" + self.source_mapper[json_file_list[0]]]
         self.log_content = []
 
         for json_file_name in json_file_list:
@@ -337,7 +330,6 @@ class AnimatedDisplay(QMainWindow):
                         continue                            
 
                     last_txt = single_view_seq[-1] if len(single_view_seq) > 0 else None
-                    last_msk = single_view_seq[-2] if len(single_view_seq) > 1 else None
                     new_canvas = Image.new('L', size, 0)
 
                     points = shape['points']
@@ -401,62 +393,8 @@ class AnimatedDisplay(QMainWindow):
         self.warning_log_display.setFont(font)
         cursor = self.warning_log_display.textCursor()
         
+        self.log_content = list(set(self.log_content))
         for line in self.log_content:
             cursor.insertText(line + '\n', red_format)
 
         self.warning_log_display.setTextCursor(cursor)
-
-    def select_folder(self):
-        folder_path = QFileDialog.getExistingDirectory(self, "Select Folder", "")
-        if folder_path:
-            self.folder_path = folder_path
-            self.load_current_index()
-            global case_file_path, case_file_list
-            case_file_path = folder_path
-            case_file_list = [item for item in os.listdir(case_file_path) if item.startswith('p')]
-            case_file_list = sorted(case_file_list, key=lambda x: (int(x.split('-')[0][1:]), int(x.split('-')[1][1:])))
-            covt_seq = self.load_covt_seq(case_file_list[self.current_index])
-            if covt_seq:
-                self.set_items(covt_seq)
-                self.setWindowTitle(case_file_list[self.current_index])
-
-
-    def save_current_index(self):
-        current_file_path = __file__
-        normalized_path = os.path.normpath(current_file_path)
-        current_directory = os.path.dirname(normalized_path)
-
-        if os.path.exists(os.path.join(current_directory, 'settings.json')):
-            with open(os.path.join(current_directory, 'settings.json'), 'r', encoding='utf-8') as f:
-                settings = json.load(f)
-        else:
-            settings = {}
-        settings[self.folder_path] = self.current_index
-        with open(os.path.join(current_directory, 'settings.json'), 'w') as f:
-            json.dump(settings, f, indent=4)
-
-    def load_current_index(self):
-        current_file_path = __file__
-        normalized_path = os.path.normpath(current_file_path)
-        current_directory = os.path.dirname(normalized_path)
-
-        if os.path.exists(os.path.join(current_directory, 'settings.json')):
-            with open(os.path.join(current_directory, 'settings.json'), 'r', encoding='utf-8') as f:
-                settings = json.load(f)
-            self.current_index = settings.get(self.folder_path, 0)
-        else:
-            self.current_index = 0
-    
-
-    def closeEvent(self, event):
-        self.save_current_index()
-        event.accept()
-
-def main():
-    app = QApplication(sys.argv)
-    window = AnimatedDisplay()
-    window.show()
-    sys.exit(app.exec_())
-
-if __name__ == '__main__':
-    main()

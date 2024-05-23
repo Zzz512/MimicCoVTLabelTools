@@ -37,6 +37,8 @@ from labelme.widgets import ToolBar
 from labelme.widgets import UniqueLabelQListWidget
 from labelme.widgets import ZoomWidget
 
+from labelme.check import AnimatedDisplay
+
 from . import utils
 import json
 
@@ -49,7 +51,7 @@ import json
 
 
 LABEL_COLORMAP = imgviz.label_colormap()
-TOOL_UUID = '653e3201-3106-4c7a-8ebd-c7d8e4af47ad'
+TOOL_UUID = '54b77d1f-3bcd-4e10-9cc0-3cc9872dfd16'
 
 class MainWindow(QtWidgets.QMainWindow):
     FIT_WINDOW, FIT_WIDTH, MANUAL_ZOOM = 0, 1, 2
@@ -191,6 +193,11 @@ class MainWindow(QtWidgets.QMainWindow):
         fileListWidget.setLayout(fileListLayout)
         self.file_dock.setWidget(fileListWidget)
 
+        self.check_dock = QtWidgets.QDockWidget(self.tr("Check Sequence"), self)
+        self.check_dock.setObjectName("Check")
+        self.checkWindow = AnimatedDisplay()
+        self.check_dock.setWidget(self.checkWindow)
+
         self.zoomWidget = ZoomWidget()
         self.setAcceptDrops(True)
 
@@ -219,7 +226,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setCentralWidget(scrollArea)
 
         features = QtWidgets.QDockWidget.DockWidgetFeatures()
-        for dock in ["flag_dock", "label_dock", "shape_dock", "file_dock"]:
+        for dock in ["flag_dock", "label_dock", "shape_dock", "file_dock", "check_dock"]:
             if self._config[dock]["closable"]:
                 features = features | QtWidgets.QDockWidget.DockWidgetClosable
             if self._config[dock]["floatable"]:
@@ -234,6 +241,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.addDockWidget(Qt.RightDockWidgetArea, self.label_dock)
         self.addDockWidget(Qt.RightDockWidgetArea, self.shape_dock)
         self.addDockWidget(Qt.RightDockWidgetArea, self.file_dock)
+        self.addDockWidget(Qt.LeftDockWidgetArea, self.check_dock)
 
         # Actions
         action = functools.partial(utils.newAction, self)
@@ -778,6 +786,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.label_dock.toggleViewAction(),
                 self.shape_dock.toggleViewAction(),
                 self.file_dock.toggleViewAction(),
+                self.check_dock.toggleViewAction(),
                 None,
                 fill_drawing,
                 None,
@@ -984,7 +993,6 @@ class MainWindow(QtWidgets.QMainWindow):
             return self.loadReportJson()
 
     def loadReportJson(self):
-        # 假设你需要在这里加载并处理JSON文件
         if self.report_json:
             try:
                 with open(self.report_json, 'r') as file:
@@ -992,7 +1000,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 return data
             except Exception as e:
                 QtWidgets.QMessageBox.critical(self, "Error", str(e))
-                self.report_json = None  # 重置路径，因为加载失败
+                self.report_json = None
 
     def noShapes(self):
         return not len(self.labelList)
@@ -1391,9 +1399,14 @@ class MainWindow(QtWidgets.QMainWindow):
             item.setFlags(item.flags() | QtCore.Qt.ItemIsEditable)
             self.flag_widget.addItem(item)
 
+    def check_vis_update(self, file_path: str):
+        case_dir = os.path.dirname(file_path)
+        covt_seq = self.checkWindow.load_covt_seq(case_dir)
+        if covt_seq:
+            self.checkWindow.set_items(covt_seq)
+
     def saveLabels(self, filename):
         lf = LabelFile()
-
         def format_shape(s):
             data = s.other_data.copy()
             data.update(
@@ -1437,6 +1450,8 @@ class MainWindow(QtWidgets.QMainWindow):
                 items[0].setCheckState(Qt.Checked)
             # disable allows next and previous image to proceed
             # self.filename = filename
+
+            self.check_vis_update(filename)
             return True
         except LabelFileError as e:
             self.errorMessage(
@@ -1637,6 +1652,8 @@ class MainWindow(QtWidgets.QMainWindow):
         if filename is None:
             filename = self.settings.value("filename", "")
         filename = str(filename)
+        self.check_vis_update(filename)
+
         if not QtCore.QFile.exists(filename):
             self.errorMessage(
                 self.tr("Error opening file"),
@@ -1646,6 +1663,7 @@ class MainWindow(QtWidgets.QMainWindow):
         # assumes same name, but json extension
         self.status(str(self.tr("Loading %s...")) % osp.basename(str(filename)))
         label_file = osp.splitext(filename)[0] + ".json"
+
         if self.output_dir:
             label_file_without_path = osp.basename(label_file)
             label_file = osp.join(self.output_dir, label_file_without_path)
@@ -2037,7 +2055,7 @@ class MainWindow(QtWidgets.QMainWindow):
             matching_files = [file for file in files if file.endswith(".json") and file != os.path.basename(filename)]
             for file in matching_files:
                 other_view_json_path = os.path.join(directory, file)
-                with open(other_view_json_path, 'r') as f:
+                with open(other_view_json_path, 'r', encoding='utf-8') as f:
                     json_data = json.load(f)
                 json_data['flags'] = split_sentences(self.tmp_dict[self.ref_index])
                 with open(other_view_json_path, 'w') as f:
