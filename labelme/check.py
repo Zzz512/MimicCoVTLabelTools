@@ -135,6 +135,8 @@ class AnimatedDisplay(QWidget):
     def set_items(self, items):
         # 清空当前布局中的所有小部件
         self.clear_layout(self.scroll_area_layout)
+        if items is None:
+            pass
 
         # List of items to display (images and texts)
         self.items = []
@@ -255,6 +257,8 @@ class AnimatedDisplay(QWidget):
         flags = list()
 
         json_file_list = [file_name for file_name in os.listdir(json_dir_path) if file_name.endswith('.json')]
+        if len(json_file_list) == 0:
+            return None
         self.log_content = []
 
         for json_file_name in json_file_list:
