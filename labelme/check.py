@@ -310,7 +310,7 @@ class AnimatedDisplay(QMainWindow):
                 single_view_seq = []
 
                 json_file_path = os.path.join(json_dir_path, json_file_name)
-                with open(json_file_path, 'r') as f:
+                with open(json_file_path, 'r', encoding='utf-8') as f:
                     json_data = json.load(f)
                 
                 shapes = json_data["shapes"]
@@ -427,7 +427,7 @@ class AnimatedDisplay(QMainWindow):
         current_directory = os.path.dirname(normalized_path)
 
         if os.path.exists(os.path.join(current_directory, 'settings.json')):
-            with open(os.path.join(current_directory, 'settings.json'), 'r') as f:
+            with open(os.path.join(current_directory, 'settings.json'), 'r', encoding='utf-8') as f:
                 settings = json.load(f)
         else:
             settings = {}
@@ -441,7 +441,7 @@ class AnimatedDisplay(QMainWindow):
         current_directory = os.path.dirname(normalized_path)
 
         if os.path.exists(os.path.join(current_directory, 'settings.json')):
-            with open(os.path.join(current_directory, 'settings.json'), 'r') as f:
+            with open(os.path.join(current_directory, 'settings.json'), 'r', encoding='utf-8') as f:
                 settings = json.load(f)
             self.current_index = settings.get(self.folder_path, 0)
         else:
