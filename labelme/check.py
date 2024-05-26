@@ -301,7 +301,7 @@ class AnimatedDisplay(QWidget):
         for flag in flags:
             single_report_seq = []
 
-            assert len(json_file_list) <= 2
+            # assert len(json_file_list) <= 2
             
             for json_file_name in json_file_list:
                 single_view_seq = []

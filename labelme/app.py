@@ -51,7 +51,7 @@ import json
 
 
 LABEL_COLORMAP = imgviz.label_colormap()
-TOOL_UUID = 'f95da7ad-bdff-4089-853b-4236e37da160'
+TOOL_UUID = '46bee8dd-b85f-429b-a516-966af2aed3fa'
 
 class MainWindow(QtWidgets.QMainWindow):
     FIT_WINDOW, FIT_WIDTH, MANUAL_ZOOM = 0, 1, 2
@@ -1030,7 +1030,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.actions.undo.setEnabled(self.canvas.isShapeRestorable)
 
         if self._config["auto_save"] or self.actions.saveAuto.isChecked():
-            label_file = osp.splitext(self.imagePath)[0] + ".json"
+            # label_file = osp.splitext(self.imagePath)[0] + ".json"
+            label_file = self.filename.replace('.png', '.json')
+            self.check_vis_update(os.path.dirname(label_file))
             if self.output_dir:
                 label_file_without_path = osp.basename(label_file)
                 label_file = osp.join(self.output_dir, label_file_without_path)
