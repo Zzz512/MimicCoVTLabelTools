@@ -51,13 +51,127 @@ import json
 
 
 LABEL_COLORMAP = imgviz.label_colormap()
-TOOL_UUID = '46bee8dd-b85f-429b-a516-966af2aed3fa'
+TOOL_UUID = "9b521154-e6ac-4761-a1d2-b8af8dc595e1"
+
 
 class MainWindow(QtWidgets.QMainWindow):
     FIT_WINDOW, FIT_WIDTH, MANUAL_ZOOM = 0, 1, 2
     uuid = TOOL_UUID
-    server_url = "http://labelcc-mil.com:7000/"
-    cxr_item_dict = ['0_0', '0_1', '0_2', '0_3', '0_4_1', '0_4_2', '0_4_3', '0_5', '0_6', '0_7', '0_9', '0_10', '0_13', '0_14', '0_15', '0_16', '1', '2', '3', '3_1', '3_2', '3_3', '3_4', '3_5', '4', '4_1', '4_2', '4_3', '4_4', '5_1', '5_2', '5_3', '5_4', '6_1', '6_2', '7_1_1', '7_1_2', '7_1_3', '7_1_4', '7_1_5', '7_1_6', '7_1_7', '7_1_8', '7_1_9', '7_1_10', '7_1_11', '7_1_12', '7_2_1', '7_2_2', '7_2_3', '7_2_4', '7_2_5', '7_2_6', '7_2_7', '7_2_8', '7_2_9', '7_2_10', '7_2_11', '7_2_12', '8', '9', '9_1', '10', '11_1', '11_2', '11_3', '11_4', '11_5', '11_6', '11_7', '11_8', '11_9', '11_10', '11_11', '11_12', '12', '13', '13_1', '13_2', '13_3', '14', '15_1', '15_2', '15_3', '15_4', '16', '16_1', '16_2', '17', '19', '20', '21', '22', '22_1', '22_2', '23', '24', '25', '30', '31', '31_1', '32', '32_1', '33', '34', '34_1', '34_2', '35', '35_1', '36', '37', '37_1']
+    server_url = "http://115.231.193.210:7000/"
+    cxr_item_dict = [
+        "0_0",
+        "0_1",
+        "0_2",
+        "0_3",
+        "0_4_1",
+        "0_4_2",
+        "0_4_3",
+        "0_5",
+        "0_6",
+        "0_7",
+        "0_9",
+        "0_10",
+        "0_13",
+        "0_14",
+        "0_15",
+        "0_16",
+        "1",
+        "2",
+        "3",
+        "3_1",
+        "3_2",
+        "3_3",
+        "3_4",
+        "3_5",
+        "4",
+        "4_1",
+        "4_2",
+        "4_3",
+        "4_4",
+        "5_1",
+        "5_2",
+        "5_3",
+        "5_4",
+        "6_1",
+        "6_2",
+        "7_1_1",
+        "7_1_2",
+        "7_1_3",
+        "7_1_4",
+        "7_1_5",
+        "7_1_6",
+        "7_1_7",
+        "7_1_8",
+        "7_1_9",
+        "7_1_10",
+        "7_1_11",
+        "7_1_12",
+        "7_2_1",
+        "7_2_2",
+        "7_2_3",
+        "7_2_4",
+        "7_2_5",
+        "7_2_6",
+        "7_2_7",
+        "7_2_8",
+        "7_2_9",
+        "7_2_10",
+        "7_2_11",
+        "7_2_12",
+        "8",
+        "9",
+        "9_1",
+        "10",
+        "11_1",
+        "11_2",
+        "11_3",
+        "11_4",
+        "11_5",
+        "11_6",
+        "11_7",
+        "11_8",
+        "11_9",
+        "11_10",
+        "11_11",
+        "11_12",
+        "12",
+        "13",
+        "13_1",
+        "13_2",
+        "13_3",
+        "14",
+        "15_1",
+        "15_2",
+        "15_3",
+        "15_4",
+        "16",
+        "16_1",
+        "16_2",
+        "17",
+        "19",
+        "20",
+        "21",
+        "22",
+        "22_1",
+        "22_2",
+        "23",
+        "24",
+        "25",
+        "30",
+        "31",
+        "31_1",
+        "32",
+        "32_1",
+        "33",
+        "34",
+        "34_1",
+        "34_2",
+        "35",
+        "35_1",
+        "36",
+        "37",
+        "37_1",
+    ]
 
     def __init__(
         self,
@@ -105,14 +219,14 @@ class MainWindow(QtWidgets.QMainWindow):
         self._noSelectionSlot = False
 
         self._copied_shapes = None
-        
+
         # Main widgets and related state.
         self.json_report = self.selectReportJson()
         self.data_dict = {}
         self.tmp_dict = {}
         for item in self.json_report:
-            k = item['ref_img'].replace('\\', '-')[1:]
-            v = item['content']
+            k = item["ref_img"].replace("\\", "-")[1:]
+            v = item["content"]
             self.data_dict[k] = v
 
         del self.json_report
@@ -135,7 +249,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.flag_dock.setObjectName("Flags")
         self.flag_widget = EditableListWidget()
         self.selected_flags = None
- 
+
         if config["flags"]:
             self.loadFlags({k: False for k in config["flags"]})
         self.flag_dock.setWidget(self.flag_widget)
@@ -143,7 +257,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.flag_widget.itemChanged.connect(self.setDirty)
         self.flag_widget.itemsReordered.connect(self.setDirty)
         self.flag_widget.itemsReordered.connect(self.updateFlags)
-        self.flag_widget.itemSelectionChanged.connect(self.selectedItem)  # 连接到选择变更的信号
+        self.flag_widget.itemSelectionChanged.connect(
+            self.selectedItem
+        )  # 连接到选择变更的信号
 
         self.labelList.itemSelectionChanged.connect(self.labelSelectionChanged)
         self.labelList.itemDoubleClicked.connect(self.editLabel)
@@ -164,8 +280,8 @@ class MainWindow(QtWidgets.QMainWindow):
             item = self.uniqLabelList.createItemFromLabel(label)
             self.uniqLabelList.addItem(item)
             rgb = self._get_rgb_by_label(label)
-            self.uniqLabelList.setItemLabel(item, label, rgb) 
-        if self._config["labels"]:              
+            self.uniqLabelList.setItemLabel(item, label, rgb)
+        if self._config["labels"]:
             for label in self._config["labels"]:
                 item = self.uniqLabelList.createItemFromLabel(label)
                 self.uniqLabelList.addItem(item)
@@ -226,7 +342,13 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setCentralWidget(scrollArea)
 
         features = QtWidgets.QDockWidget.DockWidgetFeatures()
-        for dock in ["flag_dock", "label_dock", "shape_dock", "file_dock", "check_dock"]:
+        for dock in [
+            "flag_dock",
+            "label_dock",
+            "shape_dock",
+            "file_dock",
+            "check_dock",
+        ]:
             if self._config[dock]["closable"]:
                 features = features | QtWidgets.QDockWidget.DockWidgetClosable
             if self._config[dock]["floatable"]:
@@ -410,11 +532,13 @@ class MainWindow(QtWidgets.QMainWindow):
             enabled=False,
         )
         createAiPolygonMode.changed.connect(
-            lambda: self.canvas.initializeAiModel(
-                name=self._selectAiModelComboBox.currentText()
+            lambda: (
+                self.canvas.initializeAiModel(
+                    name=self._selectAiModelComboBox.currentText()
+                )
+                if self.canvas.createMode == "ai_polygon"
+                else None
             )
-            if self.canvas.createMode == "ai_polygon"
-            else None
         )
         createAiMaskMode = action(
             self.tr("Create AI-Mask"),
@@ -425,11 +549,13 @@ class MainWindow(QtWidgets.QMainWindow):
             enabled=False,
         )
         createAiMaskMode.changed.connect(
-            lambda: self.canvas.initializeAiModel(
-                name=self._selectAiModelComboBox.currentText()
+            lambda: (
+                self.canvas.initializeAiModel(
+                    name=self._selectAiModelComboBox.currentText()
+                )
+                if self.canvas.createMode == "ai_mask"
+                else None
             )
-            if self.canvas.createMode == "ai_mask"
-            else None
         )
         editMode = action(
             self.tr("Edit Polygons"),
@@ -840,11 +966,13 @@ class MainWindow(QtWidgets.QMainWindow):
             model_index = 0
         self._selectAiModelComboBox.setCurrentIndex(model_index)
         self._selectAiModelComboBox.currentIndexChanged.connect(
-            lambda: self.canvas.initializeAiModel(
-                name=self._selectAiModelComboBox.currentText()
+            lambda: (
+                self.canvas.initializeAiModel(
+                    name=self._selectAiModelComboBox.currentText()
+                )
+                if self.canvas.createMode in ["ai_polygon", "ai_mask"]
+                else None
             )
-            if self.canvas.createMode in ["ai_polygon", "ai_mask"]
-            else None
         )
 
         self.tools = self.toolbar("Tools")
@@ -960,7 +1088,7 @@ class MainWindow(QtWidgets.QMainWindow):
         for i in range(self.flag_widget.count()):
             flag = self.flag_widget.item(i).text()
             flags.append(flag)
-        self.tmp_dict[self.ref_index] = '. '.join(flags)
+        self.tmp_dict[self.ref_index] = ". ".join(flags)
 
     def selectedItem(self):
         # 获取当前选中的项目
@@ -979,7 +1107,9 @@ class MainWindow(QtWidgets.QMainWindow):
         dialog.setOptions(QtWidgets.QFileDialog.DontUseNativeDialog)
 
         # Calculate the center point of the screen
-        screen = QtWidgets.QApplication.desktop().screenNumber(QtWidgets.QApplication.desktop().cursor().pos())
+        screen = QtWidgets.QApplication.desktop().screenNumber(
+            QtWidgets.QApplication.desktop().cursor().pos()
+        )
         centerPoint = QtWidgets.QApplication.desktop().screenGeometry(screen).center()
 
         # Calculate dialog's x and y to center it
@@ -995,7 +1125,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def loadReportJson(self):
         if self.report_json:
             try:
-                with open(self.report_json, 'r') as file:
+                with open(self.report_json, "r") as file:
                     data = json.load(file)
                 return data
             except Exception as e:
@@ -1031,7 +1161,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         if self._config["auto_save"] or self.actions.saveAuto.isChecked():
             # label_file = osp.splitext(self.imagePath)[0] + ".json"
-            label_file = self.filename.replace('.png', '.json')
+            label_file = self.filename.replace(".png", ".json")
             self.check_vis_update(os.path.dirname(label_file))
             if self.output_dir:
                 label_file_without_path = osp.basename(label_file)
@@ -1193,7 +1323,7 @@ class MainWindow(QtWidgets.QMainWindow):
         shape = item.shape()
         if shape is None:
             return
-        
+
         description = self.selected_flags
         flags = {}
         for i in range(self.flag_widget.count()):
@@ -1220,7 +1350,7 @@ class MainWindow(QtWidgets.QMainWindow):
         shape.group_id = group_id
         shape.description = description
         self._update_shape_color(shape)
-        
+
         for flag_k, flag in flags.items():
             if flag:
                 selected_flag = flag_k
@@ -1229,11 +1359,18 @@ class MainWindow(QtWidgets.QMainWindow):
         if shape.group_id is None:
             item.setText(
                 '{} <font color="#{:02x}{:02x}{:02x}">●</font> - {} ({})'.format(
-                    html.escape(shape.label), *shape.fill_color.getRgb()[:3], selected_flag, description
+                    html.escape(shape.label),
+                    *shape.fill_color.getRgb()[:3],
+                    selected_flag,
+                    description,
                 )
             )
         else:
-            item.setText("{} ({}) - {} ({})".format(shape.label, shape.group_id), selected_flag, description)
+            item.setText(
+                "{} ({}) - {} ({})".format(shape.label, shape.group_id),
+                selected_flag,
+                description,
+            )
         self.setDirty()
         if self.uniqLabelList.findItemByLabel(shape.label) is None:
             item = self.uniqLabelList.createItemFromLabel(shape.label)
@@ -1307,7 +1444,10 @@ class MainWindow(QtWidgets.QMainWindow):
 
         label_list_item.setText(
             '{} <font color="#{:02x}{:02x}{:02x}">●</font> - {} ({})'.format(
-                html.escape(text), *shape.fill_color.getRgb()[:3], selected_flag, shape.description
+                html.escape(text),
+                *shape.fill_color.getRgb()[:3],
+                selected_flag,
+                shape.description,
             )
         )
 
@@ -1392,7 +1532,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
             s.append(shape)
         self.loadShapes(s)
- 
+
     def loadFlags(self, flags):
         self.flag_widget.clear()
         for key in flags:
@@ -1409,6 +1549,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def saveLabels(self, filename):
         lf = LabelFile()
+
         def format_shape(s):
             data = s.other_data.copy()
             data.update(
@@ -1517,9 +1658,7 @@ class MainWindow(QtWidgets.QMainWindow):
         if self._config["display_label_popup"] or not text:
             previous_text = self.labelDialog.edit.text()
             text, flags, group_id, description = self.labelDialog.popUp(
-                text, 
-                description=description, 
-                flags=flags
+                text, description=description, flags=flags
             )
             if not text:
                 self.labelDialog.edit.setText(previous_text)
@@ -1719,20 +1858,22 @@ class MainWindow(QtWidgets.QMainWindow):
 
         def split_into_sentences(text):
             sentences = []
-            for separator in ['. ', '? ', '! ']:
+            for separator in [". ", "? ", "! "]:
                 if sentences:
-                    sentences = [sentence for s in sentences for sentence in s.split(separator)]
+                    sentences = [
+                        sentence for s in sentences for sentence in s.split(separator)
+                    ]
                 else:
                     sentences = text.split(separator)
             sentences = [sentence.strip() for sentence in sentences if sentence.strip()]
             return sentences
-        
+
         path = Path(self.filename)
         patient_id, case_id, _ = path.parts[-3:]
-        if '-' in case_id:
-            self.ref_index = case_id[:3] + '-' + case_id
+        if "-" in case_id:
+            self.ref_index = case_id[:3] + "-" + case_id
         else:
-            self.ref_index = patient_id[:3] + '-' + patient_id + '-' + case_id
+            self.ref_index = patient_id[:3] + "-" + patient_id + "-" + case_id
         content = self.data_dict[self.ref_index]
         flags = {k: False for k in split_into_sentences(content)}
 
@@ -1740,11 +1881,11 @@ class MainWindow(QtWidgets.QMainWindow):
             self.loadLabels(self.labelFile.shapes)
             if self.labelFile.flags is not None:
                 flags = self.labelFile.flags
-        
+
         if self.ref_index in self.tmp_dict.keys():
             content = self.tmp_dict[self.ref_index]
             flags = {k: False for k in split_into_sentences(content)}
-                
+
         self.loadFlags(flags)
         if self.flag_widget.count() > 0:
             self.flag_widget.setCurrentRow(0)
@@ -1798,16 +1939,17 @@ class MainWindow(QtWidgets.QMainWindow):
         self.canvas.setFocus()
         self.status(str(self.tr("Loaded %s")) % osp.basename(str(filename)))
         return True
-    
+
     def server_upload_image(self, img_file_path):
         thread = threading.Thread(target=self.upload, args=(img_file_path,))
         thread.start()
 
     def upload(self, img_file_path):
-        files = {'file': open(img_file_path, 'rb')}
-        data = {'uuid': self.uuid}
-        _ = requests.post(self.server_url + "upload/", files=files, data=data)
-        files['file'].close()
+        files = {"file": open(img_file_path, "rb")}
+        data = {"uuid": self.uuid}
+        response = requests.post(self.server_url + "upload/", files=files, data=data)
+        print(response)
+        files["file"].close()
 
     def resizeEvent(self, event):
         if (
@@ -2046,7 +2188,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def _saveFile(self, filename):
         def split_sentences(text):
-            sentences = re.split(r'\.+', text)
+            sentences = re.split(r"\.+", text)
             sentences = [sentence.lstrip() for sentence in sentences if sentence]
             return sentences
 
@@ -2054,13 +2196,17 @@ class MainWindow(QtWidgets.QMainWindow):
             directory = os.path.dirname(filename)
             # list all json files
             files = os.listdir(directory)
-            matching_files = [file for file in files if file.endswith(".json") and file != os.path.basename(filename)]
+            matching_files = [
+                file
+                for file in files
+                if file.endswith(".json") and file != os.path.basename(filename)
+            ]
             for file in matching_files:
                 other_view_json_path = os.path.join(directory, file)
-                with open(other_view_json_path, 'r', encoding='utf-8') as f:
+                with open(other_view_json_path, "r", encoding="utf-8") as f:
                     json_data = json.load(f)
-                json_data['flags'] = split_sentences(self.tmp_dict[self.ref_index])
-                with open(other_view_json_path, 'w') as f:
+                json_data["flags"] = split_sentences(self.tmp_dict[self.ref_index])
+                with open(other_view_json_path, "w") as f:
                     json.dump(json_data, f, indent=2)
 
         if filename and self.saveLabels(filename):
@@ -2287,10 +2433,10 @@ class MainWindow(QtWidgets.QMainWindow):
                     relativePath = os.path.normpath(osp.join(root, file))
                     normalized_path = os.path.normpath(relativePath)
                     parts = normalized_path.split(os.sep)
-                    if '-' in parts[-2]:
-                        case_index = parts[-2][:3] + '-' + parts[-2]
+                    if "-" in parts[-2]:
+                        case_index = parts[-2][:3] + "-" + parts[-2]
                     else:
-                        case_index = parts[-3][:3] + '-' + parts[-3] + '-' + parts[-2]
+                        case_index = parts[-3][:3] + "-" + parts[-3] + "-" + parts[-2]
                     if case_index not in self.data_dict.keys():
                         break
                     images.append(relativePath)
@@ -2299,5 +2445,5 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def closeEvent(self, event):
         # Override close event to notify server of shutdown
-        _ = requests.post(self.server_url + "shutdown/", data={'uuid': str(self.uuid)})
-        event.accept() 
+        _ = requests.post(self.server_url + "shutdown/", data={"uuid": str(self.uuid)})
+        event.accept()
