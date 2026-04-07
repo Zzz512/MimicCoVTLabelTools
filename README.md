@@ -1,4 +1,4 @@
-# Hangzhou Dianzi University MIL CoVT Annotation Tool
+# CoVT-CXR Dataset Annotation Tool
 
 ### Get report json file
 [Baiduyun download link](https://pan.baidu.com/s/1v2wt3CTd2MDnsr8ITOrn5g?pwd=hhdu)
